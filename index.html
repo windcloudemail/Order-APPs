@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>點餐啦 - 視覺防呆版</title>
+    <title>點餐啦 - 專業整合版</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background-color: #f0f2f5; padding-top: 20px; font-family: "Microsoft JhengHei", sans-serif; }
@@ -12,15 +12,6 @@
         .btn-main { background-color: #0d6efd; color: white; width: 100%; padding: 12px; font-size: 1.2rem; border: none; border-radius: 50px; transition: 0.3s; }
         .btn-main:hover { background-color: #198754 !important; color: white; transform: translateY(-2px); }
         .manual-area { background-color: #fffde7; border: 1px dashed #ffd600; padding: 15px; border-radius: 10px; }
-        
-        /* 強化禁用狀態的顏色 */
-        select:disabled {
-            background-color: #adb5bd !important; /* 深灰色 */
-            color: #495057 !important;
-            cursor: not-allowed;
-            border-color: #6c757d;
-        }
-
         .order-card { border-bottom: 1px solid #f0f0f0; padding: 12px 0; }
         #menuImg { max-width: 100%; border-radius: 10px; }
         .progress { height: 25px; display: none; margin-top: 10px; border-radius: 15px; }
@@ -33,8 +24,280 @@
 <div class="container">
     <div class="header-row">
         <h2 class="m-0">🥤 點餐啦</h2>
-        <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#adminModal">⚙️ 後台管理</button>
+        <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#adminModal">⚙️ 後台管理菜單</button>
     </div>
+
+    <div class="mb-3">
+        <label class="form-label fw-bold">選擇店家</label>
+        <select id="shopSelect" class="form-select" onchange="checkShopImage()"><option value="">載入中...</option></select>
+        <button id="viewMenuBtn" class="btn btn-info btn-sm w-100 mt-2" style="display:none;" data-bs-toggle="modal" data-bs-target="#menuModal">🖼️ 查看圖片菜單</button>
+    </div>
+
+    <div class="manual-area mb-3">
+        <label class="form-label fw-bold text-primary">看圖點餐 / 手動輸入：</label>
+        <div class="row g-2">
+            <div class="col-8"><input type="text" id="manualName" class="form-control" placeholder="飲品名稱"></div>
+            <div class="col-4"><input type="number" id="manualPrice" class="form-control" placeholder="價格"></div>
+        </div>
+        <div class="row g-2 mt-2">
+            <div class="col"><select id="sugar" class="form-select"><option>正常糖</option><option>半糖</option><option>微糖</option><option>無糖</option></select></div>
+            <div class="col"><select id="ice" class="form-select"><option>正常冰</option><option>少冰</option><option>微冰</option><option>去冰</option></select></div>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label fw-bold">你的名字</label>
+        <input type="text" id="userName" class="form-control" placeholder="請輸入姓名">
+    </div>
+
+    <button onclick="submitOrder()" class="btn btn-main shadow mb-4">送出訂單</button>
+
+    <div class="date-filter d-flex align-items-center justify-content-between">
+        <span class="fw-bold">📅 查詢日期：</span>
+        <input type="date" id="queryDate" class="form-control form-control-sm w-50" onchange="startListening()">
+    </div>
+
+    <div class="alert alert-light border">
+        <div id="summaryArea">載入統計中...</div>
+        <div class="text-end mt-2">
+            <button class="btn btn-dark btn-sm" onclick="copySummary()">📋 複製統計內容</button>
+        </div>
+    </div>
+
+    <h5 class="mt-4">📋 訂單列表</h5>
+    <div id="orderList"></div>
+</div>
+
+<div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-success text-white border-0">
+                <h5 class="modal-title">🎉 點單成功</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-4 px-4 text-center">
+                <h5 id="successMsgHeader" class="mb-3 text-dark"></h5>
+                <p id="successMsgDetail" class="lead text-secondary fw-normal"></p>
+                <button type="button" class="btn btn-success w-100 rounded-pill mt-3" data-bs-dismiss="modal">我知道了</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="menuModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header"><h5>菜單圖片</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body text-center"><img id="menuImg" src=""></div>
+</div></div></div>
+
+<div class="modal fade" id="adminModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5>🛠️ 菜單管理後台</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <div class="mb-3">
+            <label class="form-label fw-bold">選擇操作模式：</label>
+            <select id="adminMode" class="form-select mb-3" onchange="toggleAdminUI()">
+                <option value="add">新增店家</option>
+                <option value="edit">修改現有菜單</option>
+                <option value="delete">刪除店家</option>
+            </select>
+        </div>
+        <div id="divAdminNewShop" class="mb-3">
+            <label class="form-label">輸入新店家名稱</label>
+            <input type="text" id="adminNewName" class="form-control" placeholder="例如：迷客夏">
+        </div>
+        <div id="divAdminSelectShop" class="mb-3" style="display:none;">
+            <label class="form-label">選擇要處理的店家</label>
+            <select id="adminShopSelect" class="form-select"></select>
+        </div>
+        <div id="divAdminFile" class="mb-3">
+            <label class="form-label">上傳新菜單圖片</label>
+            <input type="file" id="adminFile" class="form-control" accept="image/*">
+        </div>
+        <div class="progress" id="uploadProgress">
+            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" style="width: 0%">0%</div>
+        </div>
+        <button id="adminSubmitBtn" class="btn btn-primary w-100 mt-3" onclick="handleAdminAction()">執行操作</button>
+    </div>
+</div></div></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    // Firebase 配置
+    const firebaseConfig = {
+        apiKey: "AIzaSyBVKIwa0GOQAdbOBjec3qRpoTouoybb-EA",
+        authDomain: "order-app-7fc8d.firebaseapp.com",
+        projectId: "order-app-7fc8d",
+        storageBucket: "order-app-7fc8d.firebasestorage.app",
+        messagingSenderId: "1048272085989",
+        appId: "1:1048272085989:web:449d2de7a877436541050c"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+    
+    let shopData = {};
+    let todayOrders = [];
+    let unsubscribeOrders = null;
+
+    // 1. 初始化日期
+    const todayStr = new Date().toISOString().split('T')[0];
+    document.getElementById('queryDate').value = todayStr;
+
+    // 2. 加載選單資料
+    function loadMenuData() {
+        db.collection("menu").onSnapshot(snap => {
+            const sel = document.getElementById('shopSelect');
+            const admSel = document.getElementById('adminShopSelect');
+            sel.innerHTML = '<option value="">請選擇店家</option>';
+            admSel.innerHTML = '<option value="">請選擇...</option>';
+            shopData = {};
+            snap.forEach(doc => {
+                shopData[doc.id] = doc.data();
+                sel.innerHTML += `<option value="${doc.id}">${doc.id}</option>`;
+                admSel.innerHTML += `<option value="${doc.id}">${doc.id}</option>`;
+            });
+        });
+    }
+
+    // 3. 監聽日期訂單 (含分店顏色統計)
+    function startListening() {
+        const selectedDate = document.getElementById('queryDate').value;
+        if (!selectedDate) return;
+
+        const startTime = new Date(selectedDate);
+        startTime.setHours(0, 0, 0, 0);
+        const endTime = new Date(selectedDate);
+        endTime.setHours(23, 59, 59, 999);
+
+        if (unsubscribeOrders) unsubscribeOrders();
+
+        unsubscribeOrders = db.collection("orders")
+            .where("timestamp", ">=", startTime)
+            .where("timestamp", "<=", endTime)
+            .orderBy("timestamp", "desc")
+            .onSnapshot(snap => {
+                const list = document.getElementById('orderList');
+                const summaryArea = document.getElementById('summaryArea');
+                let shopTotals = {}; 
+                todayOrders = []; 
+                list.innerHTML = "";
+
+                snap.forEach(doc => {
+                    const d = doc.data();
+                    todayOrders.push(d);
+                    const sName = d.shop || "未指定店家";
+                    const p = Number(d.price) || 0;
+
+                    if (!shopTotals[sName]) shopTotals[sName] = { count: 0, sum: 0 };
+                    shopTotals[sName].count++;
+                    shopTotals[sName].sum += p;
+
+                    list.innerHTML += `<div class="order-card"><b>${d.name || '無名'}</b> [${sName}] ${d.item} ($${p})<br><small class="text-muted">${d.detail || ''}</small></div>`;
+                });
+
+                const colors = ['primary', 'success', 'info', 'warning', 'danger'];
+                let colorIdx = 0;
+                let summaryHtml = `<div class="fw-bold mb-2">💰 ${selectedDate} 統計：</div>`;
+                for (let s in shopTotals) {
+                    const c = colors[colorIdx % colors.length];
+                    summaryHtml += `<div class="summary-item bg-light text-${c} border border-${c}"><span>🏠 ${s}</span><span>${shopTotals[s].count} 杯 / ${shopTotals[s].sum} 元</span></div>`;
+                    colorIdx++;
+                }
+                if (Object.keys(shopTotals).length === 0) summaryHtml = `📅 ${selectedDate} 尚無訂單`;
+                summaryArea.innerHTML = summaryHtml;
+            });
+    }
+
+    // 4. 後台邏輯
+    function toggleAdminUI() {
+        const mode = document.getElementById('adminMode').value;
+        document.getElementById('divAdminNewShop').style.display = (mode === 'add') ? 'block' : 'none';
+        document.getElementById('divAdminSelectShop').style.display = (mode !== 'add') ? 'block' : 'none';
+        document.getElementById('divAdminFile').style.display = (mode !== 'delete') ? 'block' : 'none';
+    }
+
+    async function handleAdminAction() {
+        const mode = document.getElementById('adminMode').value;
+        let shopName = mode === 'add' ? document.getElementById('adminNewName').value : document.getElementById('adminShopSelect').value;
+        if (!shopName) return alert("請填寫或選擇店家名稱");
+        if (mode === 'delete') {
+            if (!confirm(`確定要刪除「${shopName}」嗎？`)) return;
+            await db.collection("menu").doc(shopName).delete();
+            alert("店家已刪除");
+            return;
+        }
+        const file = document.getElementById('adminFile').files[0];
+        if (!file) return alert("請選擇圖片");
+        const btn = document.getElementById('adminSubmitBtn');
+        const progDiv = document.getElementById('uploadProgress');
+        const progBar = document.getElementById('progressBar');
+        btn.disabled = true; progDiv.style.display = 'flex';
+        const storageRef = storage.ref(`menus/${shopName}_${Date.now()}`);
+        const uploadTask = storageRef.put(file);
+        uploadTask.on('state_changed', snap => {
+            const p = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
+            progBar.style.width = p + '%'; progBar.innerText = p + '%';
+        }, null, async () => {
+            const url = await uploadTask.snapshot.ref.getDownloadURL();
+            await db.collection("menu").doc(shopName).set({ imageUrl: url });
+            alert("🎉 更新成功！");
+            btn.disabled = false; progDiv.style.display = 'none';
+            bootstrap.Modal.getInstance(document.getElementById('adminModal')).hide();
+        });
+    }
+
+    // 5. 前台點餐
+    function checkShopImage() {
+        const shop = document.getElementById('shopSelect').value;
+        const btn = document.getElementById('viewMenuBtn');
+        if(shop && shopData[shop]?.imageUrl) {
+            btn.style.display = 'block';
+            document.getElementById('menuImg').src = shopData[shop].imageUrl;
+        } else { btn.style.display = 'none'; }
+    }
+
+    function submitOrder() {
+        const name = document.getElementById('userName').value;
+        const item = document.getElementById('manualName').value;
+        const price = parseInt(document.getElementById('manualPrice').value) || 0;
+        const shop = document.getElementById('shopSelect').value;
+        if(!name || !item || !shop) return alert("請填寫完整資訊");
+
+        db.collection("orders").add({
+            name, item, price, shop,
+            detail: `${document.getElementById('sugar').value} / ${document.getElementById('ice').value}`,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(() => {
+            // 顯示自定義成功視窗
+            document.getElementById('successMsgHeader').innerText = `謝謝 ${name} 您的訂單`;
+            document.getElementById('successMsgDetail').innerText = `本次的訂單為 (${shop})(${item})(${price}元)`;
+            new bootstrap.Modal(document.getElementById('successModal')).show();
+            document.getElementById('manualName').value = "";
+            document.getElementById('manualPrice').value = "";
+        });
+    }
+
+    function copySummary() {
+        if (!todayOrders.length) return alert("無訂單");
+        let txt = `🥤 ${document.getElementById('queryDate').value} 訂單統計：\n\n`;
+        let grandTotal = 0;
+        todayOrders.forEach((o, i) => {
+            const p = Number(o.price) || 0; grandTotal += p;
+            txt += `${i + 1}. ${o.name}: [${o.shop}] ${o.item} ($${p}) - ${o.detail}\n`;
+        });
+        txt += `\n----------------------\n總計共 ${grandTotal} 元`;
+        navigator.clipboard.writeText(txt).then(() => alert("📋 內容已複製！"));
+    }
+
+    loadMenuData();
+    startListening();
+</script>
+</body>
+</html>    </div>
 
     <div class="mb-3">
         <label class="form-label fw-bold">選擇店家</label>
@@ -251,3 +514,4 @@
 </script>
 </body>
 </html>
+
