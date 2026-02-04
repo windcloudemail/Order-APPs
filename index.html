@@ -249,9 +249,30 @@
     });
 
     function sendEmail() {
-        // ... (省略與之前相同的 mailto 邏輯)
+    if (todayOrders.length === 0) {
+        alert("目前沒有今日訂單可以統計喔！");
+        return;
     }
+
+    let bodyText = "今日飲料訂單彙整如下：\n\n";
+    let grandTotal = 0;
+    
+    todayOrders.forEach((o, i) => {
+        const p = Number(o.price) || 0;
+        grandTotal += p;
+        bodyText += `${i + 1}. ${o.name}: [${o.shop || ''}] ${o.item} ($${p}) - ${o.detail || ''}\n`;
+    });
+    
+    bodyText += `\n----------------------\n`;
+    bodyText += `總計：${todayOrders.length} 杯，共 ${grandTotal} 元`;
+    
+    // 💡 請在此處填入你的預設收件人 Email
+    const mailtoUrl = `mailto:?subject=${encodeURIComponent("點點名訂單統計")}&body=${encodeURIComponent(bodyText)}`;
+    
+    window.location.href = mailtoUrl;
+}
 </script>
 </body>
 </html>
+
 
