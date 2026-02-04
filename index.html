@@ -26,10 +26,7 @@
         <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#adminModal">⚙️ 後台管理菜單</button>
     </div>
 
-    <div class="mb-3">
-        <label class="form-label fw-bold">你的名字</label>
-        <input type="text" id="userName" class="form-control" placeholder="請輸入姓名">
-    </div>
+    
 
     <div class="mb-3">
         <label class="form-label fw-bold">選擇店家</label>
@@ -48,7 +45,10 @@
             <div class="col"><select id="ice" class="form-select"><option>正常冰</option><option>少冰</option><option>微冰</option><option>去冰</option></select></div>
         </div>
     </div>
-
+        <div class="mb-3">
+            <label class="form-label fw-bold">你的名字</label>
+            <input type="text" id="userName" class="form-control" placeholder="請輸入姓名">
+        </div>
     <button onclick="submitOrder()" class="btn btn-main shadow">送出訂單</button>
 
     <div class="alert alert-light border mt-4 d-flex justify-content-between align-items-center">
@@ -254,3 +254,4 @@
 </script>
 </body>
 </html>
+
