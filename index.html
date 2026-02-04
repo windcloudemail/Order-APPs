@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>點飲料啦 - 林榮專用版</title>
+    <title>點餐啦 - 後台邏輯優化版</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background-color: #f0f2f5; padding-top: 20px; font-family: "Microsoft JhengHei", sans-serif; }
@@ -12,21 +12,19 @@
         .btn-main { background-color: #0d6efd; color: white; width: 100%; padding: 12px; font-size: 1.2rem; border: none; border-radius: 50px; transition: 0.3s; }
         .btn-main:hover { background-color: #198754 !important; color: white; transform: translateY(-2px); }
         .manual-area { background-color: #fffde7; border: 1px dashed #ffd600; padding: 15px; border-radius: 10px; }
-        
-        /* 強化禁用狀態視覺與手機適應性 */
-        select:disabled { background-color: #adb5bd !important; color: #495057 !important; cursor: not-allowed; }
+        select:disabled { background-color: #adb5bd !important; color: #495057 !important; cursor: not-allowed; border-color: #6c757d; }
         .order-card { border-bottom: 1px solid #f0f0f0; padding: 12px 0; }
         #menuImg { max-width: 100%; border-radius: 10px; }
         .progress { height: 25px; display: none; margin-top: 10px; border-radius: 15px; }
         .summary-item { border-radius: 10px; padding: 8px 15px; margin-bottom: 5px; font-weight: bold; display: flex; justify-content: space-between; }
         .date-filter { background: #e9ecef; padding: 10px 15px; border-radius: 15px; margin-bottom: 20px; border: 1px solid #ced4da; }
         
-        /* 手機版排版微調：防止欄位擠壓 */
+        /* 手機版排版優化 */
         @media (max-width: 576px) {
-            .manual-area .col-8, .manual-area .col-4 { width: 100%; } /* 品項與價格在手機上分行 */
+            .manual-area .col-8, .manual-area .col-4 { width: 100%; }
             .manual-area .row.g-2 > div { margin-bottom: 8px; }
-            .col-temp { width: 100% !important; } /* 冷熱選單獨佔一行 */
-            .col-sugar, .col-ice { width: 50% !important; } /* 糖度冰塊並列 */
+            .col-temp { width: 100% !important; }
+            .col-sugar, .col-ice { width: 50% !important; }
         }
     </style>
 </head>
@@ -34,8 +32,8 @@
 
 <div class="container">
     <div class="header-row">
-        <h2 class="m-0">🥤 點飲料啦啦啦</h2>
-        <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#adminModal">⚙️ 後台管理</button>
+        <h2 class="m-0">🥤 點餐啦</h2>
+        <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#adminModal" onclick="resetAdminUI()">⚙️ 後台管理</button>
     </div>
 
     <div class="mb-3">
@@ -48,24 +46,19 @@
         <label class="form-label fw-bold text-primary">看圖點餐 / 手動輸入：</label>
         <div class="row g-2 mb-2">
             <div class="col-8 col-sm-8"><input type="text" id="manualName" class="form-control" placeholder="飲品名稱"></div>
-            <div class="col-4 col-sm-4"><input type="number" id="manualPrice" class="form-control" placeholder="價格 (必填)"></div>
+            <div class="col-4 col-sm-4"><input type="number" id="manualPrice" class="form-control" placeholder="價格"></div>
         </div>
         <div class="row g-2">
             <div class="col-12 col-sm-4 col-temp">
                 <select id="tempSelect" class="form-select" onchange="toggleIceSelect()">
-                    <option value="冷">🧊 冷飲</option>
-                    <option value="熱">♨️ 熱飲</option>
+                    <option value="冷">🧊 冷飲</option><option value="熱">♨️ 熱飲</option>
                 </select>
             </div>
             <div class="col-6 col-sm-4 col-sugar">
-                <select id="sugar" class="form-select">
-                    <option>正常糖</option><option>半糖</option><option>微糖</option><option>無糖</option>
-                </select>
+                <select id="sugar" class="form-select"><option>正常糖</option><option>半糖</option><option>微糖</option><option>無糖</option></select>
             </div>
             <div class="col-6 col-sm-4 col-ice">
-                <select id="ice" class="form-select">
-                    <option>正常冰</option><option>少冰</option><option>微冰</option><option>去冰</option>
-                </select>
+                <select id="ice" class="form-select"><option>正常冰</option><option>少冰</option><option>微冰</option><option>去冰</option></select>
             </div>
         </div>
     </div>
@@ -74,48 +67,59 @@
         <label class="form-label fw-bold">你的名字</label>
         <input type="text" id="userName" class="form-control" placeholder="請輸入姓名">
     </div>
-
     <button onclick="submitOrder()" class="btn btn-main shadow mb-4">送出訂單</button>
 
     <div class="date-filter d-flex align-items-center justify-content-between">
         <span class="fw-bold">📅 查詢日期：</span>
         <input type="date" id="queryDate" class="form-control form-control-sm w-50" onchange="startListening()">
     </div>
-
-    <div class="alert alert-light border">
-        <div id="summaryArea">載入統計中...</div>
-        <div class="text-end mt-2">
-            <button class="btn btn-dark btn-sm" onclick="copySummary()">📋 複製統計內容</button>
-        </div>
-    </div>
-
-    <h5 class="mt-4">📋 訂單列表</h5>
-    <div id="orderList"></div>
+    <div class="alert alert-light border"><div id="summaryArea">載入統計中...</div><div class="text-end mt-2"><button class="btn btn-dark btn-sm" onclick="copySummary()">📋 複製統計內容</button></div></div>
+    <h5 class="mt-4">📋 訂單列表</h5><div id="orderList"></div>
 </div>
 
-<div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg">
-        <div class="modal-header bg-success text-white border-0"><h5 class="modal-title">🎉 點單成功</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
-        <div class="modal-body py-4 px-4 text-center">
-            <h5 id="successMsgHeader" class="mb-3"></h5>
-            <p id="successMsgDetail" class="lead text-secondary"></p>
-            <button type="button" class="btn btn-success w-100 rounded-pill mt-3" data-bs-dismiss="modal">我知道了</button>
+<div class="modal fade" id="adminModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5>🛠️ 菜單管理後台</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">選擇操作模式：</label>
+                    <select id="adminMode" class="form-select mb-3" onchange="toggleAdminUI()">
+                        <option value="">請選擇</option>
+                        <option value="add">新增店家</option>
+                        <option value="edit">修改現有菜單</option>
+                        <option value="delete">刪除店家</option>
+                    </select>
+                </div>
+
+                <div id="adminInputGroup" style="display:none;">
+                    <div id="divAdminNewShop" class="mb-3" style="display:none;">
+                        <label class="form-label">輸入新店家名稱</label>
+                        <input type="text" id="adminNewName" class="form-control" placeholder="例如：迷客夏">
+                    </div>
+
+                    <div id="divAdminSelectShop" class="mb-3" style="display:none;">
+                        <label class="form-label">選擇要處理的店家</label>
+                        <select id="adminShopSelect" class="form-select"></select>
+                    </div>
+
+                    <div id="divAdminFile" class="mb-3" style="display:none;">
+                        <label class="form-label">上傳菜單圖片</label>
+                        <input type="file" id="adminFile" class="form-control" accept="image/*">
+                    </div>
+
+                    <div class="progress" id="uploadProgress">
+                        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" style="width: 0%">0%</div>
+                    </div>
+
+                    <button id="adminSubmitBtn" class="btn btn-primary w-100 mt-3" onclick="handleAdminAction()">執行操作</button>
+                </div>
+            </div>
         </div>
-    </div></div>
+    </div>
 </div>
 
-<div class="modal fade" id="menuModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content text-center py-2"><img id="menuImg" src=""></div></div></div>
-<div class="modal fade" id="adminModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
-    <div class="modal-header"><h5>🛠️ 菜單管理</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-    <div class="modal-body">
-        <select id="adminMode" class="form-select mb-3" onchange="toggleAdminUI()"><option value="add">新增</option><option value="edit">修改</option><option value="delete">刪除</option></select>
-        <input type="text" id="adminNewName" class="form-control mb-2" placeholder="新店家名">
-        <select id="adminShopSelect" class="form-select mb-2" style="display:none;"></select>
-        <input type="file" id="adminFile" class="form-control mb-2" accept="image/*">
-        <div class="progress" id="uploadProgress"><div id="progressBar" class="progress-bar bg-success" style="width:0%">0%</div></div>
-        <button id="adminSubmitBtn" class="btn btn-primary w-100 mt-3" onclick="handleAdminAction()">執行操作</button>
-    </div>
-</div></div></div>
+<div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg"><div class="modal-header bg-success text-white border-0"><h5 class="modal-title">🎉 點單成功</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body py-4 px-4 text-center"><h5 id="successMsgHeader" class="mb-3"></h5><p id="successMsgDetail" class="lead text-secondary"></p><button type="button" class="btn btn-success w-100 rounded-pill mt-3" data-bs-dismiss="modal">我知道了</button></div></div></div></div>
 
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -123,7 +127,6 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    // Firebase 配置
     const firebaseConfig = {
         apiKey: "AIzaSyBVKIwa0GOQAdbOBjec3qRpoTouoybb-EA",
         authDomain: "order-app-7fc8d.firebaseapp.com",
@@ -138,10 +141,133 @@
     const storage = firebase.storage();
     let shopData = {}, todayOrders = [], unsubscribeOrders = null;
 
+    // --- 後台管理 UI 切換 (修正邏輯) ---
+    function toggleAdminUI() {
+        const mode = document.getElementById('adminMode').value;
+        const inputGroup = document.getElementById('adminInputGroup');
+        const divNew = document.getElementById('divAdminNewShop');
+        const divSelect = document.getElementById('divAdminSelectShop');
+        const divFile = document.getElementById('divAdminFile');
+        const btn = document.getElementById('adminSubmitBtn');
+
+        if (!mode) {
+            inputGroup.style.display = 'none';
+            return;
+        }
+
+        inputGroup.style.display = 'block';
+        
+        // 模式判斷
+        if (mode === 'add') {
+            divNew.style.display = 'block';
+            divSelect.style.display = 'none';
+            divFile.style.display = 'block';
+            btn.innerText = '上傳並新增店家';
+            btn.className = 'btn btn-primary w-100 mt-3';
+        } else if (mode === 'edit') {
+            divNew.style.display = 'none';
+            divSelect.style.display = 'block';
+            divFile.style.display = 'block';
+            btn.innerText = '更新店家菜單';
+            btn.className = 'btn btn-warning w-100 mt-3';
+        } else if (mode === 'delete') {
+            divNew.style.display = 'none';
+            divSelect.style.display = 'block';
+            divFile.style.display = 'none'; // 刪除模式不需要上傳圖片
+            btn.innerText = '確定刪除店家';
+            btn.className = 'btn btn-danger w-100 mt-3';
+        }
+    }
+
+    function resetAdminUI() {
+        document.getElementById('adminMode').value = '';
+        toggleAdminUI();
+    }
+
+    // --- 載入店家資料 ---
+    db.collection("menu").onSnapshot(snap => {
+        const sel = document.getElementById('shopSelect');
+        const admSel = document.getElementById('adminShopSelect');
+        sel.innerHTML = '<option value="">選擇店家</option>';
+        admSel.innerHTML = '<option value="">請選擇要處理的店家</option>';
+        shopData = {};
+        snap.forEach(doc => {
+            shopData[doc.id] = doc.data();
+            sel.innerHTML += `<option value="${doc.id}">${doc.id}</option>`;
+            admSel.innerHTML += `<option value="${doc.id}">${doc.id}</option>`;
+        });
+    });
+
+    // --- 管理執行動作 (修正獲取 shopName 的來源) ---
+    async function handleAdminAction() {
+        const mode = document.getElementById('adminMode').value;
+        let shopName = "";
+        
+        if (mode === 'add') {
+            shopName = document.getElementById('adminNewName').value.trim();
+        } else {
+            shopName = document.getElementById('adminShopSelect').value;
+        }
+
+        if (!shopName || shopName === "請選擇要處理的店家") return alert("請填寫或選擇店家名稱");
+
+        if (mode === 'delete') {
+            if (!confirm(`確定要刪除「${shopName}」嗎？`)) return;
+            await db.collection("menu").doc(shopName).delete();
+            alert("店家已刪除");
+            resetAdminUI();
+            bootstrap.Modal.getInstance(document.getElementById('adminModal')).hide();
+            return;
+        }
+
+        // 新增與修改模式
+        const file = document.getElementById('adminFile').files[0];
+        if (!file) return alert("請選擇菜單圖片檔案");
+
+        const btn = document.getElementById('adminSubmitBtn');
+        const progDiv = document.getElementById('uploadProgress');
+        const progBar = document.getElementById('progressBar');
+        btn.disabled = true;
+        progDiv.style.display = 'flex';
+
+        const storageRef = storage.ref(`menus/${shopName}_${Date.now()}`);
+        const uploadTask = storageRef.put(file);
+
+        uploadTask.on('state_changed', 
+            s => {
+                const p = Math.round((s.bytesTransferred / s.totalBytes) * 100);
+                progBar.style.width = p + '%'; progBar.innerText = p + '%';
+            }, 
+            err => { alert("錯誤：" + err.message); btn.disabled = false; }, 
+            async () => {
+                const url = await uploadTask.snapshot.ref.getDownloadURL();
+                await db.collection("menu").doc(shopName).set({ imageUrl: url });
+                alert("🎉 操作成功！");
+                btn.disabled = false;
+                progDiv.style.display = 'none';
+                resetAdminUI();
+                bootstrap.Modal.getInstance(document.getElementById('adminModal')).hide();
+            }
+        );
+    }
+
+    // (其餘前台功能 submitOrder, checkShopImage, startListening, copySummary, toggleIceSelect 保持不變)
+    // ... 
+    
+    // 初始化呼叫
+    const todayQuery = new Date().toISOString().split('T')[0];
+    document.getElementById('queryDate').value = todayQuery;
+    
+    // 這裡補上之前的其餘 JS 邏輯...
     function toggleIceSelect() {
         const temp = document.getElementById('tempSelect').value;
         const ice = document.getElementById('ice');
         if (temp === '熱') { ice.value = "去冰"; ice.disabled = true; } else { ice.disabled = false; }
+    }
+
+    function checkShopImage() {
+        const s = document.getElementById('shopSelect').value, btn = document.getElementById('viewMenuBtn'), img = document.getElementById('menuImg');
+        if(s && shopData[s]?.imageUrl) { btn.style.display = 'block'; img.src = shopData[s].imageUrl; } else { btn.style.display = 'none'; }
     }
 
     function submitOrder() {
@@ -150,12 +276,7 @@
         const priceInput = document.getElementById('manualPrice').value;
         const shop = document.getElementById('shopSelect').value;
         const temp = document.getElementById('tempSelect').value;
-        
-        if(!name) return alert("📢 請填寫您的名字");
-        if(!shop) return alert("📢 請選擇一家飲料店");
-        if(!item) return alert("📢 請輸入想喝的飲品名稱");
-        if(!priceInput || isNaN(priceInput)) return alert("📢 請輸入正確的價格，不能留空喔！");
-
+        if(!name || !shop || !item || !priceInput) return alert("📢 請填寫完整點餐資訊");
         const price = parseInt(priceInput);
         db.collection("orders").add({
             name, item, price, shop, temp,
@@ -167,22 +288,6 @@
             document.getElementById('successMsgDetail').innerText = `本次訂單：(${shop})(${icon}${item})(${price}元)`;
             new bootstrap.Modal(document.getElementById('successModal')).show();
             document.getElementById('manualName').value = ""; document.getElementById('manualPrice').value = "";
-        });
-    }
-
-    // 初始化與歷史監聽邏輯
-    const todayStr = new Date().toISOString().split('T')[0];
-    document.getElementById('queryDate').value = todayStr;
-
-    function loadMenuData() {
-        db.collection("menu").onSnapshot(snap => {
-            const sel = document.getElementById('shopSelect'), admSel = document.getElementById('adminShopSelect');
-            sel.innerHTML = '<option value="">選擇店家</option>'; admSel.innerHTML = '<option value="">選擇...</option>';
-            snap.forEach(doc => {
-                shopData[doc.id] = doc.data();
-                sel.innerHTML += `<option value="${doc.id}">${doc.id}</option>`;
-                admSel.innerHTML += `<option value="${doc.id}">${doc.id}</option>`;
-            });
         });
     }
 
@@ -212,26 +317,14 @@
         });
     }
 
-    // 管理後台邏輯 (略)
-    function checkShopImage() {
-        const s = document.getElementById('shopSelect').value, btn = document.getElementById('viewMenuBtn'), img = document.getElementById('menuImg');
-        if(s && shopData[s]?.imageUrl) { btn.style.display = 'block'; img.src = shopData[s].imageUrl; } else { btn.style.display = 'none'; }
+    function copySummary() {
+        if(!todayOrders.length) return alert("無訂單");
+        let txt = `🥤 ${document.getElementById('queryDate').value} 統計：\n\n`;
+        todayOrders.forEach((o, i) => txt += `${i+1}. ${o.name}: [${o.shop}] ${o.temp}${o.item} ($${o.price}) - ${o.detail}\n`);
+        navigator.clipboard.writeText(txt).then(() => alert("📋 內容已複製！"));
     }
-    function toggleAdminUI() { const m = document.getElementById('adminMode').value; document.getElementById('divAdminNewShop').style.display = (m === 'add' ? 'block' : 'none'); document.getElementById('divAdminSelectShop').style.display = (m !== 'add' ? 'block' : 'none'); }
-    async function handleAdminAction() {
-        const m = document.getElementById('adminMode').value; let sn = (m === 'add' ? document.getElementById('adminNewName').value : document.getElementById('adminShopSelect').value);
-        if(!sn) return alert("請填寫店家"); if(m === 'delete') { await db.collection("menu").doc(sn).delete(); alert("刪除成功"); return; }
-        const f = document.getElementById('adminFile').files[0]; if(!f) return alert("請選圖片");
-        const task = storage.ref(`menus/${sn}_${Date.now()}`).put(f);
-        task.on('state_changed', s => { const p = Math.round((s.bytesTransferred/s.totalBytes)*100); document.getElementById('progressBar').style.width = p+'%'; document.getElementById('progressBar').innerText = p+'%'; }, null, async () => {
-            const url = await task.snapshot.ref.getDownloadURL(); await db.collection("menu").doc(sn).set({ imageUrl: url });
-            alert("更新成功"); bootstrap.Modal.getInstance(document.getElementById('adminModal')).hide();
-        });
-    }
-    function copySummary() { if(!todayOrders.length) return alert("無訂單"); let txt = `🥤 ${document.getElementById('queryDate').value} 統計：\n\n`; todayOrders.forEach((o, i) => txt += `${i+1}. ${o.name}: [${o.shop}] ${o.temp}${o.item} ($${o.price}) - ${o.detail}\n`); navigator.clipboard.writeText(txt).then(() => alert("📋 內容已複製！")); }
 
-    loadMenuData(); startListening();
+    startListening();
 </script>
 </body>
 </html>
-
