@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>點餐啦 - 冷熱連動版</title>
+    <title>點餐啦 - 視覺防呆版</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background-color: #f0f2f5; padding-top: 20px; font-family: "Microsoft JhengHei", sans-serif; }
@@ -12,6 +12,15 @@
         .btn-main { background-color: #0d6efd; color: white; width: 100%; padding: 12px; font-size: 1.2rem; border: none; border-radius: 50px; transition: 0.3s; }
         .btn-main:hover { background-color: #198754 !important; color: white; transform: translateY(-2px); }
         .manual-area { background-color: #fffde7; border: 1px dashed #ffd600; padding: 15px; border-radius: 10px; }
+        
+        /* 強化禁用狀態的顏色 */
+        select:disabled {
+            background-color: #adb5bd !important; /* 深灰色 */
+            color: #495057 !important;
+            cursor: not-allowed;
+            border-color: #6c757d;
+        }
+
         .order-card { border-bottom: 1px solid #f0f0f0; padding: 12px 0; }
         #menuImg { max-width: 100%; border-radius: 10px; }
         .progress { height: 25px; display: none; margin-top: 10px; border-radius: 15px; }
@@ -24,7 +33,7 @@
 <div class="container">
     <div class="header-row">
         <h2 class="m-0">🥤 點餐啦</h2>
-        <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#adminModal">⚙️ 後台管理菜單</button>
+        <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#adminModal">⚙️ 後台管理</button>
     </div>
 
     <div class="mb-3">
@@ -37,13 +46,13 @@
         <label class="form-label fw-bold text-primary">看圖點餐 / 手動輸入：</label>
         <div class="row g-2 mb-2">
             <div class="col-8"><input type="text" id="manualName" class="form-control" placeholder="飲品名稱"></div>
-            <div class="col-4"><input type="number" id="manualPrice" class="form-control" placeholder="價格"></div>
+            <div class="col-4"><input type="number" id="manualPrice" class="form-control" placeholder="價格 (必填)"></div>
         </div>
         <div class="row g-2">
             <div class="col-4">
                 <select id="tempSelect" class="form-select" onchange="toggleIceSelect()">
-                    <option value="冷">冷飲</option>
-                    <option value="熱">熱飲</option>
+                    <option value="冷">🧊 冷飲</option>
+                    <option value="熱">♨️ 熱飲</option>
                 </select>
             </div>
             <div class="col-4"><select id="sugar" class="form-select"><option>正常糖</option><option>半糖</option><option>微糖</option><option>無糖</option></select></div>
@@ -75,23 +84,17 @@
 </div>
 
 <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-success text-white border-0">
-                <h5 class="modal-title">🎉 點單成功</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body py-4 px-4 text-center">
-                <h5 id="successMsgHeader" class="mb-3 text-dark"></h5>
-                <p id="successMsgDetail" class="lead text-secondary fw-normal"></p>
-                <button type="button" class="btn btn-success w-100 rounded-pill mt-3" data-bs-dismiss="modal">我知道了</button>
-            </div>
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg">
+        <div class="modal-header bg-success text-white border-0"><h5 class="modal-title">🎉 點單成功</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body py-4 px-4 text-center">
+            <h5 id="successMsgHeader" class="mb-3"></h5>
+            <p id="successMsgDetail" class="lead text-secondary"></p>
+            <button type="button" class="btn btn-success w-100 rounded-pill mt-3" data-bs-dismiss="modal">我知道了</button>
         </div>
-    </div>
+    </div></div>
 </div>
 
 <div class="modal fade" id="menuModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content text-center py-2"><img id="menuImg" src=""></div></div></div>
-
 <div class="modal fade" id="adminModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
     <div class="modal-header"><h5>🛠️ 菜單管理</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
     <div class="modal-body">
@@ -110,7 +113,6 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    // Firebase 配置
     const firebaseConfig = {
         apiKey: "AIzaSyBVKIwa0GOQAdbOBjec3qRpoTouoybb-EA",
         authDomain: "order-app-7fc8d.firebaseapp.com",
@@ -125,21 +127,49 @@
     const storage = firebase.storage();
     let shopData = {}, todayOrders = [], unsubscribeOrders = null;
 
-    // --- 連動功能：熱飲禁用冰塊 ---
+    // --- 連動與樣式強化 ---
     function toggleIceSelect() {
         const temp = document.getElementById('tempSelect').value;
         const ice = document.getElementById('ice');
         if (temp === '熱') {
-            ice.value = "去冰"; // 或設為不調整
+            ice.value = "去冰";
             ice.disabled = true;
-            ice.classList.add('bg-light');
         } else {
             ice.disabled = false;
-            ice.classList.remove('bg-light');
         }
     }
 
-    // --- 初始化日期 ---
+    // --- 價格與欄位校驗 (防呆) ---
+    function submitOrder() {
+        const name = document.getElementById('userName').value.trim();
+        const item = document.getElementById('manualName').value.trim();
+        const priceInput = document.getElementById('manualPrice').value;
+        const shop = document.getElementById('shopSelect').value;
+        const temp = document.getElementById('tempSelect').value;
+        
+        // 防呆邏輯：檢查姓名、品項、店家以及最重要的價格
+        if(!name) return alert("📢 請填寫您的名字");
+        if(!shop) return alert("📢 請選擇一家飲料店");
+        if(!item) return alert("📢 請輸入想喝的飲品名稱");
+        if(!priceInput || isNaN(priceInput)) return alert("📢 請輸入正確的價格，不能留空喔！");
+
+        const price = parseInt(priceInput);
+
+        db.collection("orders").add({
+            name, item, price, shop, temp,
+            detail: `${temp} / ${document.getElementById('sugar').value} / ${document.getElementById('ice').value}`,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(() => {
+            const icon = temp === '熱' ? '♨️' : '🧊';
+            document.getElementById('successMsgHeader').innerText = `謝謝 ${name} 您的訂單`;
+            document.getElementById('successMsgDetail').innerText = `本次訂單：(${shop})(${icon}${item})(${price}元)`;
+            new bootstrap.Modal(document.getElementById('successModal')).show();
+            document.getElementById('manualName').value = ""; 
+            document.getElementById('manualPrice').value = "";
+        });
+    }
+
+    // --- 以下功能保持不變 ---
     const todayStr = new Date().toISOString().split('T')[0];
     document.getElementById('queryDate').value = todayStr;
 
@@ -168,7 +198,8 @@
                 const sn = data.shop || "未指定", p = Number(data.price) || 0;
                 if (!shopTotals[sn]) shopTotals[sn] = { c: 0, s: 0 };
                 shopTotals[sn].c++; shopTotals[sn].s += p;
-                list.innerHTML += `<div class="order-card"><b>${data.name}</b> [${sn}] ${data.temp || '冷'} ${data.item} ($${p})<br><small class="text-muted">${data.detail}</small></div>`;
+                const icon = data.temp === '熱' ? '♨️' : '🧊';
+                list.innerHTML += `<div class="order-card"><b>${data.name}</b> [${sn}] ${icon}${data.item} ($${p})<br><small class="text-muted">${data.detail}</small></div>`;
             });
             let html = `💰 ${d} 統計：`, colors = ['primary', 'success', 'info', 'warning', 'danger'], ci = 0;
             for (let s in shopTotals) {
@@ -177,27 +208,6 @@
                 ci++;
             }
             summaryArea.innerHTML = Object.keys(shopTotals).length ? html : `📅 ${d} 尚無訂單`;
-        });
-    }
-
-    function submitOrder() {
-        const name = document.getElementById('userName').value;
-        const item = document.getElementById('manualName').value;
-        const price = parseInt(document.getElementById('manualPrice').value) || 0;
-        const shop = document.getElementById('shopSelect').value;
-        const temp = document.getElementById('tempSelect').value;
-        
-        if(!name || !item || !shop) return alert("資訊不完整");
-
-        db.collection("orders").add({
-            name, item, price, shop, temp,
-            detail: `${temp} / ${document.getElementById('sugar').value} / ${document.getElementById('ice').value}`,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        }).then(() => {
-            document.getElementById('successMsgHeader').innerText = `謝謝 ${name} 您的訂單`;
-            document.getElementById('successMsgDetail').innerText = `本次訂單為 (${shop})(${temp}${item})(${price}元)`;
-            new bootstrap.Modal(document.getElementById('successModal')).show();
-            document.getElementById('manualName').value = ""; document.getElementById('manualPrice').value = "";
         });
     }
 
@@ -218,6 +228,7 @@
         if(!sn) return alert("請填寫店家");
         if(m === 'delete') { await db.collection("menu").doc(sn).delete(); alert("刪除成功"); return; }
         const f = document.getElementById('adminFile').files[0];
+        if(!f) return alert("請選圖片");
         const task = storage.ref(`menus/${sn}_${Date.now()}`).put(f);
         task.on('state_changed', s => {
             const p = Math.round((s.bytesTransferred/s.totalBytes)*100);
