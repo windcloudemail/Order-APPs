@@ -9,7 +9,22 @@
         body { background-color: #f8f9fa; padding-top: 20px; }
         .container { max-width: 600px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
         .order-card { border-bottom: 1px solid #eee; padding: 10px 0; }
-        .btn-main { background-color: #0d6efd; color: white; width: 100%; padding: 10px; font-size: 1.2rem; }
+        /* .btn-main { background-color: #0d6efd; color: white; width: 100%; padding: 10px; font-size: 1.2rem; } */
+        .btn-main { 
+            background-color: #0d6efd; /* 原本的藍色 */
+            color: white; 
+            width: 100%; 
+            padding: 10px; 
+            font-size: 1.2rem;
+            border: none; /* 建議加上這行，去掉預設邊框 */
+            transition: background-color 0.3s; /* 加個轉場動畫會比較順 */
+        }
+        
+        /* ▼ 新增這一段：滑鼠滑過變綠色 ▼ */
+        .btn-main:hover {
+            background-color: #198754; /* 這裡改成你喜歡的綠色 (這是 Bootstrap 的成功綠) */
+            color: white; /* 確保文字還是白色 */
+        }
     </style>
 </head>
 <body>
@@ -141,4 +156,5 @@
 </body>
 
 </html>
+
 
