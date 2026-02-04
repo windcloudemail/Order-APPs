@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>點點名 - 飲料點餐系統</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; padding-top: 20px; }
+        .container { max-width: 600px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .order-card { border-bottom: 1px solid #eee; padding: 10px 0; }
+        .btn-main { background-color: #0d6efd; color: white; width: 100%; padding: 10px; font-size: 1.2rem; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2 class="text-center mb-4">🥤 點點名 (Roll Call)</h2>
+    
+    <div class="mb-3">
+        <label class="form-label">你的名字</label>
+        <input type="text" id="userName" class="form-control" placeholder="例如：王小明">
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">選擇飲料</label>
+        <select id="drinkSelect" class="form-select">
+            <option value="錫蘭紅茶">錫蘭紅茶</option>
+            <option value="茉莉綠茶">茉莉綠茶</option>
+            <option value="珍珠奶茶">珍珠奶茶</option>
+            <option value="四季春茶">四季春茶</option>
+        </select>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col">
+            <label class="form-label">甜度</label>
+            <select id="sugarSelect" class="form-select">
+                <option value="正常糖">正常糖</option>
+                <option value="半糖">半糖</option>
+                <option value="微糖">微糖</option>
+                <option value="無糖">無糖</option>
+            </select>
+        </div>
+        <div class="col">
+            <label class="form-label">冰塊</label>
+            <select id="iceSelect" class="form-select">
+                <option value="正常冰">正常冰</option>
+                <option value="少冰">少冰</option>
+                <option value="微冰">微冰</option>
+                <option value="去冰">去冰</option>
+            </select>
+        </div>
+    </div>
+
+    <button onclick="submitOrder()" class="btn btn-main rounded-pill">送出訂單</button>
+    <hr class="my-4">
+    <h4>📋 目前訂單列表</h4>
+    <div id="orderList"><p class="text-muted">載入中...</p></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+<script>
+    // ==========================================
+    // ▼ 請在這裡填入你的 Firebase Config ▼
+    // (就是你從專案設定複製的那一大串，保留大括號)
+    // ==========================================
+  const firebaseConfig = {
+  apiKey: "AIzaSyBVKIwa0GOQAdbOBjec3qRpoTouoybb-EA",
+  authDomain: "order-app-7fc8d.firebaseapp.com",
+  projectId: "order-app-7fc8d",
+  storageBucket: "order-app-7fc8d.firebasestorage.app",
+  messagingSenderId: "1048272085989",
+  appId: "1:1048272085989:web:449d2de7a877436541050c"
+};
+
+    // ==========================================
+
+    // 初始化 (注意這裡是用 firebase.initializeApp，這是正確的寫法)
+    try {
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        console.log("Firebase 連線成功！");
+
+        // 送出訂單
+        function submitOrder() {
+            const name = document.getElementById('userName').value;
+            const drink = document.getElementById('drinkSelect').value;
+            const sugar = document.getElementById('sugarSelect').value;
+            const ice = document.getElementById('iceSelect').value;
+
+            if (!name) { alert("請輸入名字！"); return; }
+
+            db.collection("orders").add({
+                name: name,
+                item: drink,
+                detail: `${sugar} / ${ice}`,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                alert("點餐成功！");
+                document.getElementById('userName').value = ''; 
+            }).catch((error) => {
+                console.error("寫入錯誤:", error);
+                alert("點餐失敗：" + error.message);
+            });
+        }
+
+        // 監聽訂單
+        db.collection("orders").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
+            const listDiv = document.getElementById('orderList');
+            listDiv.innerHTML = ""; 
+            if(snapshot.empty) {
+                listDiv.innerHTML = "<p>目前還沒有人點餐。</p>";
+                return;
+            }
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                // 處理時間戳記可能為 null 的情況 (剛寫入時)
+                let timeStr = "剛剛";
+                if (data.timestamp) {
+                    timeStr = new Date(data.timestamp.toDate()).toLocaleTimeString();
+                }
+                
+                listDiv.innerHTML += `
+                    <div class="order-card">
+                        <strong>${data.name}</strong> 點了 <span class="text-primary">${data.item}</span>
+                        <br><small class="text-muted">${data.detail} (${timeStr})</small>
+                    </div>
+                `;
+            });
+        });
+
+    } catch (e) {
+        console.error("初始化失敗:", e);
+        alert("程式設定有誤，請按 F12 看 Console 錯誤訊息");
+    }
+</script>
+
+</body>
+</html>
