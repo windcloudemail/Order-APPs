@@ -208,7 +208,9 @@
         );
     }
 
-    // --- 前台邏輯 (保持不變) ---
+// --- 前台邏輯 ---
+    let todayOrders = []; // 關鍵修正：必須定義全域變數
+
     function checkShopImage() {
         const shop = document.getElementById('shopSelect').value;
         const btn = document.getElementById('viewMenuBtn');
@@ -235,44 +237,56 @@
         });
     }
 
+    // 今日訂單監聽
     const startOfToday = new Date(); startOfToday.setHours(0,0,0,0);
     db.collection("orders").where("timestamp", ">=", startOfToday).orderBy("timestamp", "desc").onSnapshot(snap => {
         const list = document.getElementById('orderList');
         let count = 0, total = 0;
+        todayOrders = []; // 每次更新時清空舊陣列
+        
         list.innerHTML = "";
         snap.forEach(doc => {
-            const d = doc.data(); count++; total += d.price;
-            list.innerHTML += `<div class="order-card"><b>${d.name}</b> [${d.shop}] ${d.item} ($${d.price})<br><small class="text-muted">${d.detail}</small></div>`;
+            const d = doc.data();
+            todayOrders.push(d); // 關鍵修正：將資料存入全域變數
+            
+            // 關鍵修正：確保數值加總不會出現 NaN
+            const p = Number(d.price) || 0; 
+            count++; 
+            total += p;
+            
+            list.innerHTML += `<div class="order-card"><b>${d.name || '無名'}</b> [${d.shop || '未指定'}] ${d.item} ($${p})<br><small class="text-muted">${d.detail || ''}</small></div>`;
         });
         document.getElementById('tCount').innerText = count;
         document.getElementById('tPrice').innerText = total;
     });
 
     function sendEmail() {
-    if (todayOrders.length === 0) {
-        alert("目前沒有今日訂單可以統計喔！");
-        return;
+        // 檢查陣列是否有資料
+        if (!todayOrders || todayOrders.length === 0) {
+            alert("目前沒有今日訂單可以統計喔！");
+            return;
+        }
+
+        let bodyText = "今日飲料訂單彙整如下：\n\n";
+        let grandTotal = 0;
+        
+        todayOrders.forEach((o, i) => {
+            const p = Number(o.price) || 0;
+            grandTotal += p;
+            bodyText += `${i + 1}. ${o.name}: [${o.shop || ''}] ${o.item} ($${p}) - ${o.detail || ''}\n`;
+        });
+        
+        bodyText += `\n----------------------\n`;
+        bodyText += `總計：${todayOrders.length} 杯，共 ${grandTotal} 元`;
+        
+        const mailtoUrl = `mailto:?subject=${encodeURIComponent("點點名訂單統計")}&body=${encodeURIComponent(bodyText)}`;
+        window.location.href = mailtoUrl;
     }
 
-    let bodyText = "今日飲料訂單彙整如下：\n\n";
-    let grandTotal = 0;
-    
-    todayOrders.forEach((o, i) => {
-        const p = Number(o.price) || 0;
-        grandTotal += p;
-        bodyText += `${i + 1}. ${o.name}: [${o.shop || ''}] ${o.item} ($${p}) - ${o.detail || ''}\n`;
-    });
-    
-    bodyText += `\n----------------------\n`;
-    bodyText += `總計：${todayOrders.length} 杯，共 ${grandTotal} 元`;
-    
-    // 💡 請在此處填入你的預設收件人 Email
-    const mailtoUrl = `mailto:?subject=${encodeURIComponent("點點名訂單統計")}&body=${encodeURIComponent(bodyText)}`;
-    
-    window.location.href = mailtoUrl;
-}
+    loadMenu(); // 確保店家列表會跑出來
 </script>
 </body>
 </html>
+
 
 
