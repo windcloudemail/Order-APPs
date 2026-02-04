@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>點餐啦 - 視覺防呆版</title>
+    <title>點餐啦 - 手機優化版</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background-color: #f0f2f5; padding-top: 20px; font-family: "Microsoft JhengHei", sans-serif; }
@@ -13,19 +13,21 @@
         .btn-main:hover { background-color: #198754 !important; color: white; transform: translateY(-2px); }
         .manual-area { background-color: #fffde7; border: 1px dashed #ffd600; padding: 15px; border-radius: 10px; }
         
-        /* 強化禁用狀態的顏色 */
-        select:disabled {
-            background-color: #adb5bd !important; /* 深灰色 */
-            color: #495057 !important;
-            cursor: not-allowed;
-            border-color: #6c757d;
-        }
-
+        /* 強化禁用狀態視覺與手機適應性 */
+        select:disabled { background-color: #adb5bd !important; color: #495057 !important; cursor: not-allowed; }
         .order-card { border-bottom: 1px solid #f0f0f0; padding: 12px 0; }
         #menuImg { max-width: 100%; border-radius: 10px; }
         .progress { height: 25px; display: none; margin-top: 10px; border-radius: 15px; }
         .summary-item { border-radius: 10px; padding: 8px 15px; margin-bottom: 5px; font-weight: bold; display: flex; justify-content: space-between; }
         .date-filter { background: #e9ecef; padding: 10px 15px; border-radius: 15px; margin-bottom: 20px; border: 1px solid #ced4da; }
+        
+        /* 手機版排版微調：防止欄位擠壓 */
+        @media (max-width: 576px) {
+            .manual-area .col-8, .manual-area .col-4 { width: 100%; } /* 品項與價格在手機上分行 */
+            .manual-area .row.g-2 > div { margin-bottom: 8px; }
+            .col-temp { width: 100% !important; } /* 冷熱選單獨佔一行 */
+            .col-sugar, .col-ice { width: 50% !important; } /* 糖度冰塊並列 */
+        }
     </style>
 </head>
 <body>
@@ -45,18 +47,26 @@
     <div class="manual-area mb-3">
         <label class="form-label fw-bold text-primary">看圖點餐 / 手動輸入：</label>
         <div class="row g-2 mb-2">
-            <div class="col-8"><input type="text" id="manualName" class="form-control" placeholder="飲品名稱"></div>
-            <div class="col-4"><input type="number" id="manualPrice" class="form-control" placeholder="價格 (必填)"></div>
+            <div class="col-8 col-sm-8"><input type="text" id="manualName" class="form-control" placeholder="飲品名稱"></div>
+            <div class="col-4 col-sm-4"><input type="number" id="manualPrice" class="form-control" placeholder="價格 (必填)"></div>
         </div>
         <div class="row g-2">
-            <div class="col-4">
+            <div class="col-12 col-sm-4 col-temp">
                 <select id="tempSelect" class="form-select" onchange="toggleIceSelect()">
                     <option value="冷">🧊 冷飲</option>
                     <option value="熱">♨️ 熱飲</option>
                 </select>
             </div>
-            <div class="col-4"><select id="sugar" class="form-select"><option>正常糖</option><option>半糖</option><option>微糖</option><option>無糖</option></select></div>
-            <div class="col-4"><select id="ice" class="form-select"><option>正常冰</option><option>少冰</option><option>微冰</option><option>去冰</option></select></div>
+            <div class="col-6 col-sm-4 col-sugar">
+                <select id="sugar" class="form-select">
+                    <option>正常糖</option><option>半糖</option><option>微糖</option><option>無糖</option>
+                </select>
+            </div>
+            <div class="col-6 col-sm-4 col-ice">
+                <select id="ice" class="form-select">
+                    <option>正常冰</option><option>少冰</option><option>微冰</option><option>去冰</option>
+                </select>
+            </div>
         </div>
     </div>
 
@@ -113,6 +123,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
+    // Firebase 配置
     const firebaseConfig = {
         apiKey: "AIzaSyBVKIwa0GOQAdbOBjec3qRpoTouoybb-EA",
         authDomain: "order-app-7fc8d.firebaseapp.com",
@@ -127,19 +138,12 @@
     const storage = firebase.storage();
     let shopData = {}, todayOrders = [], unsubscribeOrders = null;
 
-    // --- 連動與樣式強化 ---
     function toggleIceSelect() {
         const temp = document.getElementById('tempSelect').value;
         const ice = document.getElementById('ice');
-        if (temp === '熱') {
-            ice.value = "去冰";
-            ice.disabled = true;
-        } else {
-            ice.disabled = false;
-        }
+        if (temp === '熱') { ice.value = "去冰"; ice.disabled = true; } else { ice.disabled = false; }
     }
 
-    // --- 價格與欄位校驗 (防呆) ---
     function submitOrder() {
         const name = document.getElementById('userName').value.trim();
         const item = document.getElementById('manualName').value.trim();
@@ -147,14 +151,12 @@
         const shop = document.getElementById('shopSelect').value;
         const temp = document.getElementById('tempSelect').value;
         
-        // 防呆邏輯：檢查姓名、品項、店家以及最重要的價格
         if(!name) return alert("📢 請填寫您的名字");
         if(!shop) return alert("📢 請選擇一家飲料店");
         if(!item) return alert("📢 請輸入想喝的飲品名稱");
         if(!priceInput || isNaN(priceInput)) return alert("📢 請輸入正確的價格，不能留空喔！");
 
         const price = parseInt(priceInput);
-
         db.collection("orders").add({
             name, item, price, shop, temp,
             detail: `${temp} / ${document.getElementById('sugar').value} / ${document.getElementById('ice').value}`,
@@ -164,12 +166,11 @@
             document.getElementById('successMsgHeader').innerText = `謝謝 ${name} 您的訂單`;
             document.getElementById('successMsgDetail').innerText = `本次訂單：(${shop})(${icon}${item})(${price}元)`;
             new bootstrap.Modal(document.getElementById('successModal')).show();
-            document.getElementById('manualName').value = ""; 
-            document.getElementById('manualPrice').value = "";
+            document.getElementById('manualName').value = ""; document.getElementById('manualPrice').value = "";
         });
     }
 
-    // --- 以下功能保持不變 ---
+    // 初始化與歷史監聽邏輯
     const todayStr = new Date().toISOString().split('T')[0];
     document.getElementById('queryDate').value = todayStr;
 
@@ -211,41 +212,23 @@
         });
     }
 
+    // 管理後台邏輯 (略)
     function checkShopImage() {
         const s = document.getElementById('shopSelect').value, btn = document.getElementById('viewMenuBtn'), img = document.getElementById('menuImg');
         if(s && shopData[s]?.imageUrl) { btn.style.display = 'block'; img.src = shopData[s].imageUrl; } else { btn.style.display = 'none'; }
     }
-
-    function toggleAdminUI() {
-        const m = document.getElementById('adminMode').value;
-        document.getElementById('divAdminNewShop').style.display = (m === 'add' ? 'block' : 'none');
-        document.getElementById('divAdminSelectShop').style.display = (m !== 'add' ? 'block' : 'none');
-    }
-
+    function toggleAdminUI() { const m = document.getElementById('adminMode').value; document.getElementById('divAdminNewShop').style.display = (m === 'add' ? 'block' : 'none'); document.getElementById('divAdminSelectShop').style.display = (m !== 'add' ? 'block' : 'none'); }
     async function handleAdminAction() {
-        const m = document.getElementById('adminMode').value;
-        let sn = (m === 'add' ? document.getElementById('adminNewName').value : document.getElementById('adminShopSelect').value);
-        if(!sn) return alert("請填寫店家");
-        if(m === 'delete') { await db.collection("menu").doc(sn).delete(); alert("刪除成功"); return; }
-        const f = document.getElementById('adminFile').files[0];
-        if(!f) return alert("請選圖片");
+        const m = document.getElementById('adminMode').value; let sn = (m === 'add' ? document.getElementById('adminNewName').value : document.getElementById('adminShopSelect').value);
+        if(!sn) return alert("請填寫店家"); if(m === 'delete') { await db.collection("menu").doc(sn).delete(); alert("刪除成功"); return; }
+        const f = document.getElementById('adminFile').files[0]; if(!f) return alert("請選圖片");
         const task = storage.ref(`menus/${sn}_${Date.now()}`).put(f);
-        task.on('state_changed', s => {
-            const p = Math.round((s.bytesTransferred/s.totalBytes)*100);
-            document.getElementById('progressBar').style.width = p+'%'; document.getElementById('progressBar').innerText = p+'%';
-        }, null, async () => {
-            const url = await task.snapshot.ref.getDownloadURL();
-            await db.collection("menu").doc(sn).set({ imageUrl: url });
+        task.on('state_changed', s => { const p = Math.round((s.bytesTransferred/s.totalBytes)*100); document.getElementById('progressBar').style.width = p+'%'; document.getElementById('progressBar').innerText = p+'%'; }, null, async () => {
+            const url = await task.snapshot.ref.getDownloadURL(); await db.collection("menu").doc(sn).set({ imageUrl: url });
             alert("更新成功"); bootstrap.Modal.getInstance(document.getElementById('adminModal')).hide();
         });
     }
-
-    function copySummary() {
-        if(!todayOrders.length) return alert("無訂單");
-        let txt = `🥤 ${document.getElementById('queryDate').value} 統計：\n\n`;
-        todayOrders.forEach((o, i) => txt += `${i+1}. ${o.name}: [${o.shop}] ${o.temp}${o.item} ($${o.price}) - ${o.detail}\n`);
-        navigator.clipboard.writeText(txt).then(() => alert("📋 內容已複製！"));
-    }
+    function copySummary() { if(!todayOrders.length) return alert("無訂單"); let txt = `🥤 ${document.getElementById('queryDate').value} 統計：\n\n`; todayOrders.forEach((o, i) => txt += `${i+1}. ${o.name}: [${o.shop}] ${o.temp}${o.item} ($${o.price}) - ${o.detail}\n`); navigator.clipboard.writeText(txt).then(() => alert("📋 內容已複製！")); }
 
     loadMenuData(); startListening();
 </script>
